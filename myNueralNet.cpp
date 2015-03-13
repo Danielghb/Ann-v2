@@ -189,12 +189,14 @@ void Neuron::calcHiddenGradients(const Layer &nextLayer)
 {
     double dow = sumDOW(nextLayer);
     m_gradient = dow * Neuron::transferFunctionDerivative(m_outputVal);
+    cout << "Hidden gradient: " << m_gradient << endl;
 }
 
 void Neuron::calcOutputGradients(double targetVal)
 {
     double delta = targetVal - m_outputVal;
     m_gradient = delta * Neuron::transferFunctionDerivative(m_outputVal);
+    cout << "Output gradient: " << m_gradient << endl;
 }
 
 double Neuron::transferFunction(double x)
@@ -469,14 +471,23 @@ int main()
 
     Net myNet(topology, weights);
 
-    vector <double> inputVals, resultVals;
+    vector <double> inputVals, resultVals, targetVals;
 
     inputVals.push_back(1);
     inputVals.push_back(0);
 
+    targetVals.push_back(1);
+    assert(targetVals.size() == topology.back());
+
+
     myNet.feedForward(inputVals);
     myNet.getResults(resultVals);
-    showVectorVals("Outputs:", resultVals);
+    //showVectorVals("Outputs:", resultVals);
+    myNet.backProp(targetVals);
+
+    // Report how well the training is working, average over recent samples:
+        cout << "Net recent average error: "
+                << myNet.getRecentAverageError() << endl;
 
 
     /*
