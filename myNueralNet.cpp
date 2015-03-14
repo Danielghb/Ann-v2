@@ -153,12 +153,15 @@ void Neuron::updateInputWeights(Layer &prevLayer)
 
         double newDeltaWeight =
                 // Individual input, magnified by the gradient and train rate:
-                eta
-                * neuron.getOutputVal()
-                * m_gradient
+                //eta
+                //*
+                neuron.getOutputVal()
+                * m_gradient;
                 // Also add momentum = a fraction of the previous delta weight;
-                + alpha
-                * oldDeltaWeight;
+                //+ alpha
+                //* oldDeltaWeight;
+
+                cout << "change: " << newDeltaWeight << endl;
 
         neuron.m_outputWeights[m_myIndex].deltaWeight = newDeltaWeight;
         neuron.m_outputWeights[m_myIndex].weight += newDeltaWeight;
