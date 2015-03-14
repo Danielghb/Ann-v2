@@ -455,18 +455,18 @@ int main()
     cout << weights[1].size() << endl;
 
     //1st layer [0,x]
-    weights[0].push_back(-.07);
-    weights[0].push_back(.94);
-    weights[0].push_back(.22);
-    weights[0].push_back(.46);
-    weights[0].push_back(-.46);
-    weights[0].push_back(.10);
+    weights[0].push_back(-.06782947598673161);
+    weights[0].push_back(.9487814395569221);
+    weights[0].push_back(.22341077197888182);
+    weights[0].push_back(.46158711646254);
+    weights[0].push_back(-.4635107399577998);
+    weights[0].push_back(.09750161997450091);
 
 
     //2nd layer [1,x]
-    weights[1].push_back(-.22);
-    weights[1].push_back(.58);
-    weights[1].push_back(.78);
+    weights[1].push_back(-.22791948943117624);
+    weights[1].push_back(.581714099641357);
+    weights[1].push_back(.7792991203673414);
 
     cout << weights[0].size() << endl;
     cout << weights[1].size() << endl;
