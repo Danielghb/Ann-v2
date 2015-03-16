@@ -18,7 +18,7 @@ using namespace std;
 // program, e.g., connect to a database, or take a stream of data from stdin, or
 // from a file specified by a command line argument, etc.
 
-/*
+///*
 class TrainingData
 {
 public:
@@ -40,9 +40,13 @@ void TrainingData::getTopology(vector<unsigned> &topology)
     string label;
 
     getline(m_trainingDataFile, line);
+
     stringstream ss(line);
+
     ss >> label;
+
     if (this->isEof() || label.compare("topology:") != 0) {
+            cout << "I'm broke!";
         abort();
     }
 
@@ -99,12 +103,56 @@ unsigned TrainingData::getTargetOutputs(vector<double> &targetOutputVals)
 
     return targetOutputVals.size();
 }
+//*/
+
+//http://stackoverflow.com/questions/1903954/is-there-a-standard-sign-function-signum-sgn-in-c-c
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
+/*
+template <class T> const T& min (const T& a, const T& b) {
+  return !(b<a)?a:b;     // or: return !comp(b,a)?a:b; for version (2)
+}
 */
+
+//RPROP
+double DELTA_MIN = .000001;
+double zeroTolerance = .0000000000000001;
+double DEFAULT_MAX_STEP = 50;
+double POSITIVE_ETA = 0.5;
+double NEGATIVE_ETA = 1.2;
+
+//https://github.com/encog/encog-c/blob/master/encog-core/rprop.c
+/**
+* Determine the sign of the value.
+*
+* @param value
+* The value to check.
+* @return -1 if less than zero, 1 if greater, or 0 if zero.
+*/
+
+int sign(double value) {
+    if (fabs(value) < zeroTolerance) {
+            return 0;
+    } else if (value > 0) {
+        return 1;
+        } else {
+            return -1;
+            }
+            }
 
 struct Connection
 {
     double weight;
     double deltaWeight;
+
+    //RPROP
+    double gradient = 0.0;
+    double lastGradient = 0.0;
+    double lastWeightChange =0.0;
+    double delta = 0.1;
+    double lastDelta = 0.0;
 };
 
 
@@ -123,7 +171,7 @@ public:
     void feedForward(const Layer &prevLayer);
     void calcOutputGradients(double targetVal);
     void calcHiddenGradients(const Layer &nextLayer);
-    void updateInputWeights(Layer &prevLayer);
+    void updateInputWeights(Layer &prevLayer, double lastError, double currentError);
 
 private:
     static double eta;   // [0.0..1.0] overall net training rate
@@ -141,17 +189,23 @@ private:
 double Neuron::eta = 0.15;    // overall net learning rate, [0.0..1.0]
 double Neuron::alpha = 0.5;   // momentum, multiplier of last deltaWeight, [0.0..1.0]
 
-
-void Neuron::updateInputWeights(Layer &prevLayer)
+//includes true gradient
+void Neuron::updateInputWeights(Layer &prevLayer, double lastError, double currentError)
 {
     // The weights to be updated are in the Connection container
     // in the neurons in the preceding layer
 
     for (unsigned n = 0; n < prevLayer.size(); ++n) {
         Neuron &neuron = prevLayer[n];
-        double oldDeltaWeight = neuron.m_outputWeights[m_myIndex].deltaWeight;
 
-        double newDeltaWeight =
+        // multiply the current and previous gradient, and take the
+        // sign. We want to see if the gradient has changed its sign.
+
+        double weightChange = 0.0;
+        int change = sign( neuron.m_outputWeights[m_myIndex].gradient * neuron.m_outputWeights[m_myIndex].lastGradient );
+
+        neuron.m_outputWeights[m_myIndex].gradient =
+        //double newDeltaWeight =
                 // Individual input, magnified by the gradient and train rate:
                 //eta
                 //*
@@ -161,19 +215,46 @@ void Neuron::updateInputWeights(Layer &prevLayer)
                 //+ alpha
                 //* oldDeltaWeight;
 
-                cout << "change: " << newDeltaWeight << endl;
+                cout << "gradient: " << neuron.m_outputWeights[m_myIndex].gradient << endl;
 
-        neuron.m_outputWeights[m_myIndex].deltaWeight = newDeltaWeight;
-        neuron.m_outputWeights[m_myIndex].weight += newDeltaWeight;
+        // if the gradient has retained its sign, then we increase the
+        // delta so that it will converge faster
+
+        if (change > 0)
+        {
+            neuron.m_outputWeights[m_myIndex].delta = min( neuron.m_outputWeights[m_myIndex].delta * POSITIVE_ETA , DEFAULT_MAX_STEP);
+            weightChange = -sign(neuron.m_outputWeights[m_myIndex].gradient) * neuron.m_outputWeights[m_myIndex].delta;
+            neuron.m_outputWeights[m_myIndex].lastGradient = neuron.m_outputWeights[m_myIndex].gradient;
+        }
+        // if change<0, then the sign has changed, and the last
+        // delta was too big
+
+        else if (change < 0)
+        {
+            neuron.m_outputWeights[m_myIndex].delta = max( neuron.m_outputWeights[m_myIndex].delta * NEGATIVE_ETA , DELTA_MIN);
+
+            if (currentError > lastError)
+            {
+                weightChange = -neuron.m_outputWeights[m_myIndex].lastWeightChange;
+            }
+            neuron.m_outputWeights[m_myIndex].lastGradient = 0;
+        }
+
+        // if change==0 then there is no change to the delta
+        else if (change == 0)
+        {
+            weightChange = -sign( neuron.m_outputWeights[m_myIndex].gradient ) * neuron.m_outputWeights[m_myIndex].delta;
+            neuron.m_outputWeights[m_myIndex].lastGradient = neuron.m_outputWeights[m_myIndex].gradient;
+        }
+
+        neuron.m_outputWeights[m_myIndex].lastDelta = neuron.m_outputWeights[m_myIndex].delta;
+        neuron.m_outputWeights[m_myIndex].lastWeightChange = weightChange;
+
+
+        //weight is updated
+        neuron.m_outputWeights[m_myIndex].weight += weightChange;
     }
 }
-
-/*
-double Neuron::nodeDelta(const Layer &nextLayer) const
-{
-    double
-}
-*/
 
 double Neuron::sumDOW(const Layer &nextLayer) const
 {
@@ -192,14 +273,14 @@ void Neuron::calcHiddenGradients(const Layer &nextLayer)
 {
     double dow = sumDOW(nextLayer);
     m_gradient = dow * Neuron::transferFunctionDerivative(m_outputVal);
-    cout << "Hidden gradient: " << m_gradient << endl;
+    //cout << "Hidden gradient: " << m_gradient << endl;
 }
 
 void Neuron::calcOutputGradients(double targetVal)
 {
     double delta = targetVal - m_outputVal;
     m_gradient = delta * Neuron::transferFunctionDerivative(m_outputVal);
-    cout << "Output gradient: " << m_gradient << endl;
+    //cout << "Output gradient: " << m_gradient << endl;
 }
 
 double Neuron::transferFunction(double x)
@@ -266,10 +347,13 @@ public:
     void backProp(const vector<double> &targetVals);
     void getResults(vector<double> &resultVals) const;
     double getRecentAverageError(void) const { return m_recentAverageError; }
+    double returnError();
+    double returnLastError();
 
 private:
     vector<Layer> m_layers; // m_layers[layerNum][neuronNum]
     double m_error;
+    double m_last_error = 0.0;
     double m_recentAverageError;
     static double m_recentAverageSmoothingFactor;
 };
@@ -292,6 +376,10 @@ void Net::backProp(const vector<double> &targetVals)
     // Calculate overall net error (RMS of output neuron errors)
 
     Layer &outputLayer = m_layers.back();
+
+    //backup last error
+    m_last_error = m_recentAverageError;
+
     m_error = 0.0;
 
     for (unsigned n = 0; n < outputLayer.size() - 1; ++n) {
@@ -332,9 +420,21 @@ void Net::backProp(const vector<double> &targetVals)
         Layer &prevLayer = m_layers[layerNum - 1];
 
         for (unsigned n = 0; n < layer.size() - 1; ++n) {
-            layer[n].updateInputWeights(prevLayer);
+            layer[n].updateInputWeights(prevLayer, m_last_error, m_error);
         }
     }
+}
+
+double Net::returnError()
+{
+    return m_error;
+
+}
+
+double Net::returnLastError()
+{
+    return m_last_error;
+
 }
 
 void Net::feedForward(const vector<double> &inputVals)
@@ -431,6 +531,7 @@ void showVectorVals(string label, vector<double> &v)
 int main()
 {
 
+//section A
     // e.g., { 3, 2, 1 }
     vector<unsigned> topology;
 
@@ -482,10 +583,13 @@ int main()
     targetVals.push_back(1);
     assert(targetVals.size() == topology.back());
 
-
     myNet.feedForward(inputVals);
     myNet.getResults(resultVals);
-    //showVectorVals("Outputs:", resultVals);
+
+    showVectorVals("Outputs:", resultVals);
+
+    //cout << "error: " << myNet.returnError() << endl;
+
     myNet.backProp(targetVals);
 
     // Report how well the training is working, average over recent samples:
@@ -493,8 +597,9 @@ int main()
                 << myNet.getRecentAverageError() << endl;
 
 
-    /*
-    TrainingData trainData("/tmp/trainingData.txt");
+//section b
+/*
+    TrainingData trainData("trainingData.txt");
 
     // e.g., { 3, 2, 1 }
     vector<unsigned> topology;
@@ -504,6 +609,7 @@ int main()
 
     vector<double> inputVals, targetVals, resultVals;
     int trainingPass = 0;
+
 
     while (!trainData.isEof()) {
         ++trainingPass;
@@ -533,6 +639,6 @@ int main()
     }
 
     cout << endl << "Done" << endl;
-    */
+*/
 }
 
