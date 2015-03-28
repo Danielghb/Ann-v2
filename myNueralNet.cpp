@@ -150,7 +150,7 @@ struct Connection
     //RPROP
     double gradient = 0.0;
     double lastGradient = 0.0;
-    double lastWeightChange =0.0;
+    double lastWeightChange = 0.0;
     double delta = 0.1;
     double lastDelta = 0.0;
 };
@@ -204,15 +204,57 @@ void Neuron::updateInputWeights(Layer &prevLayer)
         //PREVIOUS LAYER NEURON
         Neuron &neuron = prevLayer[n];
 
-        double oldDeltaWeight = neuron.m_outputWeights[m_myIndex].deltaWeight;
+        //double oldDeltaWeight = neuron.m_outputWeights[m_myIndex].deltaWeight;
 
-        //PREVIOUS LAYER NEURON * CURRENT NEURON's Node Delta
+        //PREVIOUS LAYER NEURON OUTPUT * CURRENT NEURON's Node Delta
         double gradient = neuron.getOutputVal() * node_delta;
+
+        if (gradient == 0)
+        {
+            gradient = 0;
+        }
 
         //cout << "previous layer size: " << prevLayer.size() << endl;
 
+        cout << neuron.getOutputVal() << endl << node_delta << endl;
         cout << "gradient: " <<  gradient << endl;
 
+        int change = sign (gradient * neuron.m_outputWeights[m_myIndex].lastGradient);
+        //cout << "sign: " << change << endl;
+
+        //double weightChange = 0.0;
+
+        cout << "change: " << change << endl;
+
+        if (change > 0)
+        {
+            neuron.m_outputWeights[m_myIndex].delta = min( neuron.m_outputWeights[m_myIndex].delta * POSITIVE_ETA , DEFAULT_MAX_STEP);
+        }
+
+        if (change < 0)
+        {
+            neuron.m_outputWeights[m_myIndex].delta = max( neuron.m_outputWeights[m_myIndex].delta * NEGATIVE_ETA , DELTA_MIN);
+        }
+
+        //need this, otherwise it outputs -0 which has an effect when multiplied against neuron.m_outputtWeights[m_myIndex].delta
+        double newDeltaWeight = 0.0;
+        if (-sign(gradient) == 0)
+        {
+            newDeltaWeight = 1 * neuron.m_outputWeights[m_myIndex].delta;
+        }
+        else
+            {
+                newDeltaWeight = -sign(gradient) * neuron.m_outputWeights[m_myIndex].delta;
+            }
+
+
+        cout << "Old Delta: " << neuron.m_outputWeights[m_myIndex].delta << endl;
+        cout << "newDeltaWeight: " << newDeltaWeight << endl;
+        cout << "Weight: " << neuron.m_outputWeights[m_myIndex].weight << endl;
+
+        neuron.m_outputWeights[m_myIndex].lastGradient = gradient;
+
+/*
         double newDeltaWeight =
                 // Individual input, magnified by the Node Delta and train rate:
 
@@ -221,9 +263,11 @@ void Neuron::updateInputWeights(Layer &prevLayer)
                 // Also add momentum = a fraction of the previous delta weight;
                 + alpha
                 * oldDeltaWeight;
-
-        neuron.m_outputWeights[m_myIndex].deltaWeight = newDeltaWeight;
+*/
+        //neuron.m_outputWeights[m_myIndex].deltaWeight = newDeltaWeight;
+        neuron.m_outputWeights[m_myIndex].delta = newDeltaWeight;
         neuron.m_outputWeights[m_myIndex].weight += newDeltaWeight;
+        cout << "New Weight: " << neuron.m_outputWeights[m_myIndex].weight << endl;
     }
 }
 
@@ -630,6 +674,42 @@ int main()
 
     Net myNet(topology, weights);
 
+    TrainingData trainData("trainingData.txt");
+
+    vector<double> inputVals, targetVals, resultVals;
+    int trainingPass = 0;
+
+
+    while (!trainData.isEof()) {
+        ++trainingPass;
+        cout << endl << "Pass " << trainingPass;
+
+        // Get new input data and feed it forward:
+        if (trainData.getNextInputs(inputVals) != topology[0]) {
+            break;
+        }
+        showVectorVals(": Inputs:", inputVals);
+        myNet.feedForward(inputVals);
+
+        // Collect the net's actual output results:
+        myNet.getResults(resultVals);
+        showVectorVals("Outputs:", resultVals);
+
+        // Train the net what the outputs should have been:
+        trainData.getTargetOutputs(targetVals);
+        showVectorVals("Targets:", targetVals);
+        assert(targetVals.size() == topology.back());
+
+        myNet.backProp(targetVals);
+
+        // Report how well the training is working, average over recent samples:
+        cout << "Net recent average error: "
+                << myNet.getRecentAverageError() << endl;
+    }
+
+    cout << endl << "Done" << endl;
+
+/*
     vector <double> inputVals, resultVals, targetVals;
 
     inputVals.push_back(1);
@@ -650,11 +730,11 @@ int main()
 
     // Report how well the training is working, average over recent samples:
         cout << endl << "Net recent average error: "
-                << myNet.getRecentAverageError() << endl;
+       /         << myNet.getRecentAverageError() << endl;
+*/
 
-/*
 //section b
-
+/*
     TrainingData trainData("trainingData.txt");
 
     // e.g., { 3, 2, 1 }
