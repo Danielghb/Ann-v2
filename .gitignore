@@ -48,3 +48,5 @@ myNueralNet.o
 *.o
 myNueralNet.exe
 *.exe
+*.exe
+myNueralNet.exe
