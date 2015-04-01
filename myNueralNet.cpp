@@ -120,8 +120,8 @@ template <class T> const T& min (const T& a, const T& b) {
 double DELTA_MIN = .000001;
 double zeroTolerance = .0000000000000001;
 double DEFAULT_MAX_STEP = 50;
-double POSITIVE_ETA = 0.5;
-double NEGATIVE_ETA = 1.2;
+double POSITIVE_ETA = 1.2;
+double NEGATIVE_ETA = .5;
 
 //https://github.com/encog/encog-c/blob/master/encog-core/rprop.c
 /**
@@ -254,16 +254,19 @@ void Neuron::updateInputWeights(Layer &prevLayer)
             }
 
             //section 2 (signer)
+            cout << "Old Delta: " << neuron.m_outputWeights[m_myIndex].delta << endl;
             double newDeltaWeight = 0.0;
 
 
         //need this, otherwise it outputs -0 which has an effect when multiplied against neuron.m_outputtWeights[m_myIndex].delta
+
         /*
         if (neuron.m_outputWeights[m_myIndex].gradient == 0)
         {
             neuron.m_outputWeights[m_myIndex].gradient = 0;
         }
         */
+
 
             //int signer = 0.0;
 
@@ -292,7 +295,7 @@ void Neuron::updateInputWeights(Layer &prevLayer)
 
             //section 3
 
-            newDeltaWeight = sign(neuron.m_outputWeights[m_myIndex].gradient)* neuron.m_outputWeights[m_myIndex].delta;
+            newDeltaWeight = -sign(neuron.m_outputWeights[m_myIndex].gradient) * neuron.m_outputWeights[m_myIndex].delta;
             //newDeltaWeight = -sign(gradient) * neuron.m_outputWeights[m_myIndex].delta;
 
             cout << "newDeltaWeight: " << newDeltaWeight << endl;

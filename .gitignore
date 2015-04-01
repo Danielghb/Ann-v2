@@ -50,3 +50,12 @@ myNueralNet.exe
 *.exe
 *.exe
 myNueralNet.exe
+trainingData-old.txt
+test2.txt
+stockData.txt
+out.txt
+myNueralNet.exe
+myNueralNet.o
+myNueralNet.o
+neural-net-tutorial-IPROP.cpp
+neural-net-tutorial.cpp
