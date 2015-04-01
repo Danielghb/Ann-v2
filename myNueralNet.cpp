@@ -295,7 +295,23 @@ void Neuron::updateInputWeights(Layer &prevLayer)
 
             //section 3
 
-            newDeltaWeight = -sign(neuron.m_outputWeights[m_myIndex].gradient) * neuron.m_outputWeights[m_myIndex].delta;
+            if (change == 0)
+            {
+                //cout << sign(neuron.m_outputWeights[m_myIndex].gradient) << "*" << neuron.m_outputWeights[m_myIndex].delta << endl;
+
+                newDeltaWeight = sign(neuron.m_outputWeights[m_myIndex].gradient) * neuron.m_outputWeights[m_myIndex].delta;
+
+            }
+            else
+                {
+                    //cout << -sign(neuron.m_outputWeights[m_myIndex].gradient) << "*" << neuron.m_outputWeights[m_myIndex].delta << endl;
+                    //newDeltaWeight = -sign(neuron.m_outputWeights[m_myIndex].gradient) * neuron.m_outputWeights[m_myIndex].delta;
+                    newDeltaWeight = change * neuron.m_outputWeights[m_myIndex].delta;
+                }
+
+
+
+
             //newDeltaWeight = -sign(gradient) * neuron.m_outputWeights[m_myIndex].delta;
 
             cout << "newDeltaWeight: " << newDeltaWeight << endl;
