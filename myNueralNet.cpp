@@ -199,7 +199,7 @@ void Neuron::updateInputWeights(Layer &prevLayer)
     // in the neurons in the preceding layer
 
     //CURRENT NEURON
-    cout << endl << "node delta: " << node_delta << endl << endl;
+//    cout << endl << "node delta: " << node_delta << endl << endl;
 
     for (unsigned n = 0; n < prevLayer.size(); ++n) {
 
@@ -213,22 +213,23 @@ void Neuron::updateInputWeights(Layer &prevLayer)
 
         //cout << "previous layer size: " << prevLayer.size() << endl;
 
-        cout << neuron.getOutputVal() << endl << node_delta << endl;
-        cout << "output value: " << neuron.getOutputVal() << endl;
-        cout << "gradient: " <<  gradient << endl;
+//        cout << neuron.getOutputVal() << endl << node_delta << endl;
+//        cout << "output value: " << neuron.getOutputVal() << endl;
+//        cout << "gradient: " <<  gradient << endl;
 
         //batch
         neuron.m_outputWeights[m_myIndex].batchGradient += gradient;
         neuron.m_outputWeights[m_myIndex].gradientCount ++;
 
-        cout << "batch: " << neuron.m_outputWeights[m_myIndex].batchGradient << endl;
+//        cout << "batch: " << neuron.m_outputWeights[m_myIndex].batchGradient << endl;
 
-        cout << "count: " << neuron.m_outputWeights[m_myIndex].gradientCount << endl;
+//        cout << "count: " << neuron.m_outputWeights[m_myIndex].gradientCount << endl;
 
         //if count == 4, then it's  batch, and do RPROP
         if (neuron.m_outputWeights[m_myIndex].gradientCount == 4)
         {
             cout << "old batch: " << neuron.m_outputWeights[m_myIndex].lastGradient << endl;
+            cout << "new batch: " << neuron.m_outputWeights[m_myIndex].batchGradient << endl;
             neuron.m_outputWeights[m_myIndex].gradient = neuron.m_outputWeights[m_myIndex].batchGradient;
 
             //reset
@@ -243,105 +244,56 @@ void Neuron::updateInputWeights(Layer &prevLayer)
             double weightChange = 0.0;
             cout << "Old Delta: " << neuron.m_outputWeights[m_myIndex].delta << endl;
 
+            //section 2
+            cout << "New Delta: " << neuron.m_outputWeights[m_myIndex].delta << endl;
+            double newDeltaWeight = 0.0;
+
             if (change > 0)
             {
                 neuron.m_outputWeights[m_myIndex].delta = min( neuron.m_outputWeights[m_myIndex].delta * POSITIVE_ETA , DEFAULT_MAX_STEP);
+                newDeltaWeight = sign(neuron.m_outputWeights[m_myIndex].gradient) * neuron.m_outputWeights[m_myIndex].delta;
+                neuron.m_outputWeights[m_myIndex].lastGradient = neuron.m_outputWeights[m_myIndex].gradient;
+                //newDeltaWeight = change * neuron.m_outputWeights[m_myIndex].delta;
             }
 
-            if (change < 0)
+            else if (change < 0)
             {
                 neuron.m_outputWeights[m_myIndex].delta = max( neuron.m_outputWeights[m_myIndex].delta * NEGATIVE_ETA , DELTA_MIN);
+                newDeltaWeight = sign(neuron.m_outputWeights[m_myIndex].gradient) * neuron.m_outputWeights[m_myIndex].delta;
+                neuron.m_outputWeights[m_myIndex].lastGradient = 0.0;
+                //newDeltaWeight = change * neuron.m_outputWeights[m_myIndex].delta;
+
             }
 
-            //section 2 (signer)
-            cout << "Old Delta: " << neuron.m_outputWeights[m_myIndex].delta << endl;
-            double newDeltaWeight = 0.0;
-
-
-        //need this, otherwise it outputs -0 which has an effect when multiplied against neuron.m_outputtWeights[m_myIndex].delta
-
-        /*
-        if (neuron.m_outputWeights[m_myIndex].gradient == 0)
-        {
-            neuron.m_outputWeights[m_myIndex].gradient = 0;
-        }
-        */
-
-
-            //int signer = 0.0;
-
-            /*
-            if (sign(neuron.m_outputWeights[m_myIndex].gradient) == 0)
-            {
-                //needed for -0 gradients
-                if (neuron.m_outputWeights[m_myIndex].gradient == 0)
-                {
-                    signer = -1;
-                }
-                else
-                {
-                    signer = 1;
-                }
-            }
-            else if (sign(neuron.m_outputWeights[m_myIndex].gradient) == 1)
-            {
-                signer = 1;
-            }
-            else if (sign(neuron.m_outputWeights[m_myIndex].gradient) == -1)
-            {
-                signer = -1;
-            }
-            */
-
-            //section 3
-
-            if (change == 0)
+            else if (change == 0)
             {
                 //cout << sign(neuron.m_outputWeights[m_myIndex].gradient) << "*" << neuron.m_outputWeights[m_myIndex].delta << endl;
+                //delta doesn't change
+
 
                 newDeltaWeight = sign(neuron.m_outputWeights[m_myIndex].gradient) * neuron.m_outputWeights[m_myIndex].delta;
+                neuron.m_outputWeights[m_myIndex].lastGradient = neuron.m_outputWeights[m_myIndex].gradient;
 
             }
-            else
-                {
-                    //cout << -sign(neuron.m_outputWeights[m_myIndex].gradient) << "*" << neuron.m_outputWeights[m_myIndex].delta << endl;
-                    //newDeltaWeight = -sign(neuron.m_outputWeights[m_myIndex].gradient) * neuron.m_outputWeights[m_myIndex].delta;
-                    newDeltaWeight = change * neuron.m_outputWeights[m_myIndex].delta;
-                }
-
 
 
 
             //newDeltaWeight = -sign(gradient) * neuron.m_outputWeights[m_myIndex].delta;
 
-            cout << "newDeltaWeight: " << newDeltaWeight << endl;
-            cout << "Weight: " << neuron.m_outputWeights[m_myIndex].weight << endl;
+            cout << "New Delta Weight: " << newDeltaWeight << endl;
+            cout << "Old Weight: " << neuron.m_outputWeights[m_myIndex].weight << endl;
 
             //section 4
 
             //neuron.m_outputWeights[m_myIndex].deltaWeight = newDeltaWeight;
-            neuron.m_outputWeights[m_myIndex].delta = newDeltaWeight;
+            //neuron.m_outputWeights[m_myIndex].delta = newDeltaWeight;
             neuron.m_outputWeights[m_myIndex].weight += newDeltaWeight;
             cout << "New Weight: " << neuron.m_outputWeights[m_myIndex].weight << endl;
 
 
             //section 5
             //update lastGradient (at end of processing of RPROP).
-            neuron.m_outputWeights[m_myIndex].lastGradient = neuron.m_outputWeights[m_myIndex].gradient;
-
             }
-
-
-
-
-
-
-
-
-
-
-
-
 
 /*
         double newDeltaWeight =
@@ -353,7 +305,7 @@ void Neuron::updateInputWeights(Layer &prevLayer)
                 + alpha
                 * oldDeltaWeight;
 */
-        system("pause");
+        //system("pause");
     }
 }
 
@@ -783,6 +735,8 @@ int main()
         myNet.getResults(resultVals);
         showVectorVals("Outputs:", resultVals);
 
+        //system("pause");
+
         // Train the net with what the outputs should have been:
         trainData.getTargetOutputs(targetVals);
         showVectorVals("Targets:", targetVals);
@@ -791,8 +745,17 @@ int main()
         myNet.backProp(targetVals);
 
         // Report how well the training is working, average over recent samples:
+        /*
         cout << "Net recent average error: "
                 << myNet.getRecentAverageError() << endl;
+                //system("pause");
+        */
+
+        cout << "error: " << myNet.returnError() << endl;
+
+//        myNet.getResults(resultVals);
+//        showVectorVals("Outputs:", resultVals);
+//        system("pause");
     }
 
     cout << endl << "Done" << endl;
